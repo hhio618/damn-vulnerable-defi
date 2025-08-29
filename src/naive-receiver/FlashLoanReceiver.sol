@@ -16,6 +16,7 @@ contract FlashLoanReceiver is IERC3156FlashBorrower {
         external
         returns (bytes32)
     {
+        // audit-high: this won't check the load actually paid but approve to repays it with fee!
         assembly {
             // gas savings
             if iszero(eq(sload(pool.slot), caller())) {
@@ -28,6 +29,7 @@ contract FlashLoanReceiver is IERC3156FlashBorrower {
 
         uint256 amountToBeRepaid;
         unchecked {
+            // q could this manipulated to return even more?
             amountToBeRepaid = amount + fee;
         }
 

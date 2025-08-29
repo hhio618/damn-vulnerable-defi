@@ -65,6 +65,7 @@ contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
 
     function withdraw(uint256 amount, address payable receiver) external {
         // Reduce deposits
+        // q could we withdraw other user funds to our address?
         deposits[_msgSender()] -= amount;
         totalDeposits -= amount;
 
@@ -84,6 +85,10 @@ contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
     }
 
     function _msgSender() internal view override returns (address) {
+        // q What if we call it with no data, e.g. sending eth 
+        // Or a short message!
+        // audit-high what if caller call the deposit function using trustedForwarder with just 
+        // 4 bytes of data?
         if (msg.sender == trustedForwarder && msg.data.length >= 20) {
             return address(bytes20(msg.data[msg.data.length - 20:]));
         } else {

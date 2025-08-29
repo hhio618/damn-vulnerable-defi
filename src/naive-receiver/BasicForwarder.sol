@@ -52,6 +52,7 @@ contract BasicForwarder is EIP712 {
         if (signer != request.from) revert InvalidSigner();
     }
 
+    // q is this trusted forwarder of the NaiveReceiverPool flawed? so we could call it with arbitrary data?
     function execute(Request calldata request, bytes calldata signature) public payable returns (bool success) {
         _checkRequest(request, signature);
 
@@ -61,14 +62,20 @@ contract BasicForwarder is EIP712 {
         uint256 value = request.value; // in wei
         address target = request.target;
         bytes memory payload = abi.encodePacked(request.data, request.from);
+        // q answered what is the forwarding of gas?
+        // Limits gas usage on for the call
         uint256 forwardGas = request.gas;
         assembly {
             success := call(forwardGas, target, value, add(payload, 0x20), mload(payload), 0, 0) // don't copy returndata
             gasLeft := gas()
         }
 
+        // q answered why this check?
+        // Solidity’s call instruction always keeps at least 1/64 of remaining gas for the caller.
+        // So if the leftover gas is below request.gas / 63, it means the call didn’t actually get all the requested gas → abort.
         if (gasLeft < request.gas / 63) {
             assembly {
+                // This is anti-gas griefing => consume all gas and fail unlike to revert
                 invalid()
             }
         }
