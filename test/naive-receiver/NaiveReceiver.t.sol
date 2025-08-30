@@ -97,8 +97,9 @@ contract NaiveReceiverChallenge is Test {
             data: abi.encodeWithSelector(Multicall.multicall.selector, data),
             deadline: block.timestamp + 1 days
         });
-        (,,bytes32 memory signature) = vm.sign(playerPk, forwarder.getDataHash(request));
-        forwarder.execute(request, bytes(signature));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(playerPk, forwarder.getDataHash(request));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        forwarder.execute(request, signature);
     }
 
     /**
