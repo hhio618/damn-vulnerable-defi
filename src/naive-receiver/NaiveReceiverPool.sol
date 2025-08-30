@@ -7,6 +7,7 @@ import {IERC3156FlashBorrower} from "@openzeppelin/contracts/interfaces/IERC3156
 import {FlashLoanReceiver} from "./FlashLoanReceiver.sol";
 import {Multicall} from "./Multicall.sol";
 import {WETH} from "solmate/tokens/WETH.sol";
+import {console} from "forge-std/Test.sol";
 
 contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
     uint256 private constant FIXED_FEE = 1e18; // not the cheapest flash loan
@@ -44,6 +45,7 @@ contract NaiveReceiverPool is Multicall, IERC3156FlashLender {
         external
         returns (bool)
     {
+        console.log("Called by", msg.sender);
         if (token != address(weth)) revert UnsupportedCurrency();
 
         // Transfer WETH and handle control to receiver
